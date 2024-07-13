@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "magic"
+version = "0.1.0"
+description = ""
+authors = ["k1-k0 <kmssrvk@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiohttp = "^3.9.5"
+faker = "^26.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
