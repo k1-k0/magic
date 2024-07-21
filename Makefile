@@ -1,9 +1,5 @@
 CODE_DIRECTORIES = magic tests
 
-
-ecc:
-	@ls magic
-
 lint:
 	@poetry run ruff check $(CODE_DIRECTORIES)
 
@@ -12,3 +8,6 @@ format:
 
 test:
 	@poetry run pytest
+
+run:
+	@poetry run python -m magic.app
