@@ -30,14 +30,16 @@ class Question:
 class Game:
     HIT = 5
 
-    def __init__(self, ) -> None:
+    def __init__(
+        self,
+    ) -> None:
         self._questions: list[Question] = []
         self._active_questions: list[Question] = []
 
         self._team_health = 100
 
     def build(self) -> None:
-        for value in numbers: 
+        for value in numbers:
             self._questions.append(
                 Question(
                     text=question_template.format(question=Text.press, number=value),
@@ -57,7 +59,7 @@ class Game:
                 self._active_questions.remove(question)
                 new_question = self.pop_question()
 
-                return  new_question
+                return new_question
 
         else:
             self._team_health -= self.HIT

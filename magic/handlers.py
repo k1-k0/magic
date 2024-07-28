@@ -1,4 +1,3 @@
-from enum import StrEnum
 import logging
 from aiohttp.web import (
     Request,

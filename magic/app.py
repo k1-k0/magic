@@ -7,6 +7,7 @@ from aiohttp.web import (
 
 from magic.handlers import hello, websocket_handler
 
+
 async def clear_websockets(app: Application) -> None:
     for websocket in app["websockets"].values():
         await websocket.close()
@@ -33,5 +34,5 @@ def main() -> NoReturn:
     raise SystemExit
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
