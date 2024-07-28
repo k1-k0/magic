@@ -3,5 +3,9 @@ from enum import StrEnum
 
 class Action(StrEnum):
     JOIN = "join"
-    SENT = "sent"
-    READY = "ready"
+    CONNECT = "connect"
+    TEAM = "team"
+    START = "start"
+    ANSWERS = "answers"
+    QUESTION = "question"
+    ANSWER = "answer"
