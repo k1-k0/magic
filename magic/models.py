@@ -41,5 +41,20 @@ class HitEvent(Event):
     value: float
 
 
+class HealthEvent(Event):
+    action: Action = Action.HEALTH
+    value: float
+
+
+class AnswerEvent(Event):
+    action: Action = Action.ANSWER
+    value: str
+
+
 class FinishEvent(Event):
     action: Action = Action.FINISH
+
+
+class DisconnectEvent(Event):
+    action: Action = Action.DISCONNECT
+    value: str

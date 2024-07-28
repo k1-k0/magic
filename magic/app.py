@@ -28,6 +28,7 @@ def main() -> NoReturn:
     )
 
     app["websockets"] = {}
+    app["game"] = None
 
     run_app(app=app)
 

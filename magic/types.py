@@ -9,3 +9,7 @@ class Action(StrEnum):
     ANSWERS = "answers"
     QUESTION = "question"
     ANSWER = "answer"
+    HIT = "hit"
+    HEALTH = "health"
+    FINISH = "finish"
+    DISCONNECT = "disconnect"

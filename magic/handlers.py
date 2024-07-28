@@ -1,5 +1,7 @@
+import json
 import logging
 from aiohttp.web import (
+    Application,
     Request,
     Response,
     WebSocketResponse,
@@ -7,6 +9,20 @@ from aiohttp.web import (
 )
 from aiohttp import WSMsgType
 from faker import Faker
+
+from magic.models import (
+    AnswersEvent,
+    ConnectEvent,
+    DisconnectEvent,
+    HealthEvent,
+    HitEvent,
+    JoinEvent,
+    QuestionEvent,
+    AnswerEvent,
+    TeamEvent,
+)
+from magic.types import Action
+from magic.game import Game
 
 
 logger = logging.getLogger(__name__)
@@ -34,43 +50,102 @@ async def websocket_handler(request: Request) -> StreamResponse:
     name = request.query.get("name", get_random_name())
     logger.info("%s joined.", name)
 
-    await ws_current.send_json({"action": "connect", "name": name})
+    # TODO: ensure ascii here
+    await ws_current.send_json(data=ConnectEvent(value=name).model_dump())
 
     for ws in request.app["websockets"].values():
-        await ws.send_json({"action": "join", "name": name})
+        # TODO: ensure ascii here
+        await ws.send_json(data=JoinEvent(value=name).model_dump())
 
+    # TODO: ensure ascii here
     await ws_current.send_json(
-        {
-            "action": "info",
-            "description": "team",
-            "value": [name for name in request.app["websockets"].keys()],
-        },
+        data=TeamEvent(
+            value=[name for name in request.app["websockets"].keys()]
+        ).model_dump(),
     )
 
-    # NOTE: name - websocket
     request.app["websockets"][name] = ws_current
 
     while True:
         msg = await ws_current.receive()
 
         if msg.type == WSMsgType.text:
-            # TODO: в msg.data сообщения в заданном протоколе
+            # TODO: add msg.data validation and graceful handle
 
-            for ws in request.app["websockets"].values():
-                if ws is not ws_current:
-                    await ws.send_json(
-                        {
-                            "action": "sent",
-                            "name": name,
-                            "text": msg.data,
-                        },
-                    )
+            await handle_event(
+                event_data=json.loads(msg.data),
+                app=request.app,
+                ws_current=ws_current,
+            )
         else:
             break
 
     del request.app["websockets"][name]
     logger.info("%s disconnected.", name)
     for ws in request.app["websockets"].values():
-        await ws.send_json({"action": "disconnect", "name": name})
+        # TODO: ensure ascii here
+        await ws.send_json(data=DisconnectEvent(value=name).model_dump())
 
     return ws_current
+
+
+async def handle_event(
+    event_data: dict[str, str], app: Application, ws_current: WebSocketResponse
+) -> None:
+    event_action = event_data["action"]
+
+    if event_action == Action.START:
+        await start(app=app)
+    elif event_action == Action.ANSWER:
+        event = AnswerEvent.model_validate(obj=event_data)
+        await answer(app=app, ws=ws_current, event=event)
+    else:
+        logger.error(f"Unsupported event action '{event_action}'")
+
+
+async def start(app: Application) -> None:
+    websockets = app["websockets"]
+    game = Game(players=len(websockets))
+    app["game"] = game
+
+    answers = game.answers()
+    for i, ws in enumerate(app["websockets"].values()):
+        json_data = json.dumps(
+            AnswersEvent(value=answers[i]).model_dump(), ensure_ascii=False
+        )
+        await ws.send_str(data=json_data)
+
+    active_questions = game.active_questions()
+    for i, ws in enumerate(app["websockets"].values()):
+        data = json.dumps(
+            QuestionEvent(value=active_questions[i].text).model_dump(),
+            ensure_ascii=False,
+        )
+        await ws.send_str(data=data)
+
+
+async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) -> None:
+    game: Game = app["game"]
+
+    # TODO: add check that game exists
+
+    question, hit = game.check_answer(answer=event.value)
+
+    if not question and hit:
+        # TODO: make function for notify all websockets
+        for websocket in app["websockets"].values():
+            data = json.dumps(HitEvent(value=hit).model_dump(), ensure_ascii=False)
+            await websocket.send_str(data=data)
+
+            data = json.dumps(
+                HealthEvent(value=game.health()).model_dump(), ensure_ascii=False
+            )
+            await websocket.send_str(data=data)
+
+        return
+
+    if question and not hit:
+        data = json.dumps(
+            QuestionEvent(value=question.text).model_dump(), ensure_ascii=False
+        )
+        await ws.send_str(data=data)
