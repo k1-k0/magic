@@ -40,6 +40,14 @@ async def websocket_handler(request: Request) -> StreamResponse:
     for ws in request.app["websockets"].values():
         await ws.send_json({"action": "join", "name": name})
 
+    await ws_current.send_json(
+        {
+            "action": "info",
+            "description": "team",
+            "value": [name for name in request.app["websockets"].keys()],
+        },
+    )
+
     # NOTE: name - websocket
     request.app["websockets"][name] = ws_current
 
@@ -48,6 +56,7 @@ async def websocket_handler(request: Request) -> StreamResponse:
 
         if msg.type == WSMsgType.text:
             # TODO: в msg.data сообщения в заданном протоколе
+
             for ws in request.app["websockets"].values():
                 if ws is not ws_current:
                     await ws.send_json(
