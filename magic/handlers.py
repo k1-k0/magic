@@ -145,6 +145,8 @@ async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) ->
         return
 
     if question and not hit:
+
+        # TODO: send new question to owner of question
         data = json.dumps(
             QuestionEvent(value=question.text).model_dump(), ensure_ascii=False
         )
