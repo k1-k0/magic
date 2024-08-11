@@ -1,3 +1,4 @@
+import logging
 from typing import NoReturn
 from aiohttp.web import (
     Application,
@@ -6,6 +7,9 @@ from aiohttp.web import (
 )
 
 from magic.handlers import hello, websocket_handler
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 async def clear_websockets(app: Application) -> None:
