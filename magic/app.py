@@ -4,9 +4,10 @@ from aiohttp.web import (
     Application,
     get,
     run_app,
+    static,
 )
 
-from magic.handlers import hello, websocket_handler
+from magic.handlers import index, websocket_handler
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -26,8 +27,9 @@ def main() -> NoReturn:
 
     app.add_routes(
         routes=[
-            get("/", hello),
+            get("/", index),
             get("/ws", websocket_handler),
+            static("/", path="static")
         ]
     )
 

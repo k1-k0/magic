@@ -6,6 +6,7 @@ from aiohttp.web import (
     Response,
     WebSocketResponse,
     StreamResponse,
+    FileResponse,
 )
 from aiohttp import WSMsgType
 from faker import Faker
@@ -33,8 +34,8 @@ def get_random_name():
     return fake.name()
 
 
-async def hello(request: Request) -> Response:
-    return Response(text="Hello, world!")
+async def index(request: Request) -> StreamResponse:
+    return FileResponse(path="static/index.html")
 
 
 async def websocket_handler(request: Request) -> StreamResponse:
