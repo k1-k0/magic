@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from magic.consts import QUESTION_TTL
 from magic.types import Action
 
 
@@ -34,6 +35,7 @@ class AnswersEvent(Event):
 class QuestionEvent(Event):
     action: Action = Action.QUESTION
     value: str
+    ttl: float = QUESTION_TTL
 
 
 class HitEvent(Event):

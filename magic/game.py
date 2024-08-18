@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 import random
 
+from aiohttp.web import WebSocketResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class Question:
 
 class Game:
     HIT = 5.0
-    QPP = 5
+    QPP = 5      # question per player
 
     def __init__(
         self,
@@ -38,6 +40,7 @@ class Game:
 
         self._questions: list[Question] = []
         self._active_questions: list[Question] = []
+        self._question_2_websocket: dict[str, WebSocketResponse] = dict()
 
         self._answers: dict[int, list[str]] = {i: [] for i in range(self._players)}
         self._team_health: float = 100.0
@@ -83,18 +86,25 @@ class Game:
     def health(self) -> float:
         return self._team_health
 
+    def set_owner(self, question: str, websocket: WebSocketResponse) -> None:
+        self._question_2_websocket[question] = websocket
+
+    def get_owner(self, question: str) -> WebSocketResponse:
+        return self._question_2_websocket.pop(question)
+
     def pop_question(self) -> Question:
         question = self._questions.pop()
         self._active_questions.append(question)
         return question
 
-    def check_answer(self, answer: str) -> tuple[Question | None, float | None]:
+    def check_answer(self, answer: str) -> tuple[Question | None, Question | None, float | None]:
         for question in self._active_questions:
             if question.answer == answer:
+                old_question = question
                 self._active_questions.remove(question)
                 new_question = self.pop_question()
 
-                return (new_question, None)
+                return (old_question, new_question, None)
 
         else:
             self._team_health -= self.HIT

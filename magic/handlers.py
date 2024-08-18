@@ -118,8 +118,10 @@ async def start(app: Application) -> None:
 
     active_questions = game.active_questions()
     for i, ws in enumerate(app["websockets"].values()):
+        question = active_questions[i]
+        game.set_owner(question=question.text, websocket=ws)
         data = json.dumps(
-            QuestionEvent(value=active_questions[i].text).model_dump(),
+            QuestionEvent(value=question.text).model_dump(),
             ensure_ascii=False,
         )
         await ws.send_str(data=data)
@@ -130,9 +132,9 @@ async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) ->
 
     # TODO: add check that game exists
 
-    question, hit = game.check_answer(answer=event.value)
+    old_question, new_question, hit = game.check_answer(answer=event.value)
 
-    if not question and hit:
+    if not new_question and hit:
         # TODO: make function for notify all websockets
         for websocket in app["websockets"].values():
             data = json.dumps(HitEvent(value=hit).model_dump(), ensure_ascii=False)
@@ -145,9 +147,12 @@ async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) ->
 
         return
 
-    if question and not hit:
-        # TODO: send new question to owner of question
+    if new_question and old_question and not hit:
+        # TODO: нужно рефакторить процесс поиска владельца вопроса 
+        question_owner_websocket = game.get_owner(question=old_question.text)
+        game.set_owner(question=new_question.text, websocket=question_owner_websocket)
+
         data = json.dumps(
-            QuestionEvent(value=question.text).model_dump(), ensure_ascii=False
+            QuestionEvent(value=new_question.text).model_dump(), ensure_ascii=False
         )
-        await ws.send_str(data=data)
+        await question_owner_websocket.send_str(data=data)

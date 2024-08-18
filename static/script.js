@@ -5,7 +5,7 @@ let currentPlayer = document.getElementById('current');
 let question = document.getElementById('question');
 
 document.getElementById('connect').onclick = function(event) {
-    socket = new WebSocket("ws://3cd40db57c7460eb8f12bd46580a3607.serveo.net/ws");
+    socket = new WebSocket("ws://localhost:8080/ws");
 
     socket.onopen = function(e) {
         console.log(e);
