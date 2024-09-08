@@ -29,7 +29,7 @@ def main() -> NoReturn:
         routes=[
             get("/", index),
             get("/ws", websocket_handler),
-            static("/", path="static")
+            static("/", path="static"),
         ]
     )
 

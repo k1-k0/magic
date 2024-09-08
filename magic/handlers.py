@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from aiohttp.web import (
@@ -9,7 +10,6 @@ from aiohttp.web import (
     FileResponse,
 )
 from aiohttp import WSMsgType
-from faker import Faker
 
 from magic.models import (
     AnswersEvent,
@@ -24,14 +24,10 @@ from magic.models import (
 )
 from magic.types import Action
 from magic.game import Game
+from magic.utils import get_random_name, send_json
 
 
 logger = logging.getLogger(__name__)
-
-
-def get_random_name():
-    fake = Faker()
-    return fake.name()
 
 
 async def index(request: Request) -> StreamResponse:
@@ -51,18 +47,17 @@ async def websocket_handler(request: Request) -> StreamResponse:
     name = request.query.get("name", get_random_name())
     logger.info("%s joined.", name)
 
-    # TODO: ensure ascii here
-    await ws_current.send_json(data=ConnectEvent(value=name).model_dump())
+    await send_json(
+        ws=ws_current,
+        event=ConnectEvent(value=name),
+    )
 
     for ws in request.app["websockets"].values():
-        # TODO: ensure ascii here
-        await ws.send_json(data=JoinEvent(value=name).model_dump())
+        await send_json(ws=ws, event=JoinEvent(value=name))
 
-    # TODO: ensure ascii here
-    await ws_current.send_json(
-        data=TeamEvent(
-            value=[name for name in request.app["websockets"].keys()]
-        ).model_dump(),
+    await send_json(
+        ws=ws_current,
+        event=TeamEvent(value=[name for name in request.app["websockets"].keys()]),
     )
 
     request.app["websockets"][name] = ws_current
@@ -84,8 +79,7 @@ async def websocket_handler(request: Request) -> StreamResponse:
     del request.app["websockets"][name]
     logger.info("%s disconnected.", name)
     for ws in request.app["websockets"].values():
-        # TODO: ensure ascii here
-        await ws.send_json(data=DisconnectEvent(value=name).model_dump())
+        await send_json(ws=ws, event=DisconnectEvent(value=name))
 
     return ws_current
 
@@ -111,20 +105,13 @@ async def start(app: Application) -> None:
 
     answers = game.answers()
     for i, ws in enumerate(app["websockets"].values()):
-        json_data = json.dumps(
-            AnswersEvent(value=answers[i]).model_dump(), ensure_ascii=False
-        )
-        await ws.send_str(data=json_data)
+        await send_json(ws=ws, event=AnswersEvent(value=answers[i]))
 
     active_questions = game.active_questions()
     for i, ws in enumerate(app["websockets"].values()):
         question = active_questions[i]
         game.set_owner(question=question.text, websocket=ws)
-        data = json.dumps(
-            QuestionEvent(value=question.text).model_dump(),
-            ensure_ascii=False,
-        )
-        await ws.send_str(data=data)
+        await send_json(ws=ws, event=QuestionEvent(value=question.text))
 
 
 async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) -> None:
@@ -137,22 +124,17 @@ async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) ->
     if not new_question and hit:
         # TODO: make function for notify all websockets
         for websocket in app["websockets"].values():
-            data = json.dumps(HitEvent(value=hit).model_dump(), ensure_ascii=False)
-            await websocket.send_str(data=data)
-
-            data = json.dumps(
-                HealthEvent(value=game.health()).model_dump(), ensure_ascii=False
+            await asyncio.gather(
+                send_json(ws=websocket, event=HitEvent(value=hit)),
+                send_json(ws=websocket, event=HealthEvent(value=game.health())),
             )
-            await websocket.send_str(data=data)
 
         return
 
     if new_question and old_question and not hit:
-        # TODO: нужно рефакторить процесс поиска владельца вопроса 
+        # TODO: нужно рефакторить процесс поиска владельца вопроса
         question_owner_websocket = game.get_owner(question=old_question.text)
         game.set_owner(question=new_question.text, websocket=question_owner_websocket)
-
-        data = json.dumps(
-            QuestionEvent(value=new_question.text).model_dump(), ensure_ascii=False
+        await send_json(
+            ws=question_owner_websocket, event=QuestionEvent(value=new_question.text)
         )
-        await question_owner_websocket.send_str(data=data)
