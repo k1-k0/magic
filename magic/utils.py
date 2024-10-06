@@ -11,5 +11,5 @@ async def send_json(ws: WebSocketResponse, event: Event) -> None:
 
 
 def get_random_name():
-    fake = Faker()
+    fake = Faker(locale="ru")
     return fake.name()
