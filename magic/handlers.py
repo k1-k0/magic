@@ -122,17 +122,15 @@ async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) ->
 
     old_question, new_question, hit = game.check_answer(answer=event.value)
 
-    if not new_question and hit:
-        # TODO: move to separate function
+    if hit:
+        # TODO: вынести в отдельную функцию общего оповещения
         for websocket in app["websockets"].values():
             await asyncio.gather(
                 send_json(ws=websocket, event=HitEvent(value=hit)),
                 send_json(ws=websocket, event=HealthEvent(value=game.health)),
             )
 
-        return
-
-    if new_question and old_question and not hit:
+    if new_question:
         # TODO: нужно рефакторить процесс поиска владельца вопроса
         question_owner_websocket = game.get_owner(question=old_question.text)
         game.set_owner(question=new_question.text, websocket=question_owner_websocket)

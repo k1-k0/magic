@@ -51,7 +51,9 @@ class Game:
         self._active_questions: list[Question] = []
         self._question_2_websocket: dict[str, WebSocketResponse] = dict()
 
-        self._answers: dict[PositiveInt, list[str]] = {i: [] for i in range(self._players)}
+        self._answers: dict[PositiveInt, list[str]] = {
+            i: [] for i in range(self._players)
+        }
         self._team_health: NonNegativeFloat = 100.0
 
         self._prepare_game()
