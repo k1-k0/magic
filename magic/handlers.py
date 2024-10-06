@@ -103,30 +103,31 @@ async def start(app: Application) -> None:
     game = Game(players=len(websockets))
     app["game"] = game
 
-    answers = game.answers()
+    answers = game.answers
     for i, ws in enumerate(app["websockets"].values()):
         await send_json(ws=ws, event=AnswersEvent(value=answers[i]))
 
-    active_questions = game.active_questions()
+    active_questions = game.active_questions
     for i, ws in enumerate(app["websockets"].values()):
         question = active_questions[i]
         game.set_owner(question=question.text, websocket=ws)
+
+        question.set_sent_time()
         await send_json(ws=ws, event=QuestionEvent(value=question.text))
 
 
 async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) -> None:
     game: Game = app["game"]
-
     # TODO: add check that game exists
 
     old_question, new_question, hit = game.check_answer(answer=event.value)
 
     if not new_question and hit:
-        # TODO: make function for notify all websockets
+        # TODO: move to separate function
         for websocket in app["websockets"].values():
             await asyncio.gather(
                 send_json(ws=websocket, event=HitEvent(value=hit)),
-                send_json(ws=websocket, event=HealthEvent(value=game.health())),
+                send_json(ws=websocket, event=HealthEvent(value=game.health)),
             )
 
         return
@@ -135,6 +136,8 @@ async def answer(app: Application, ws: WebSocketResponse, event: AnswerEvent) ->
         # TODO: нужно рефакторить процесс поиска владельца вопроса
         question_owner_websocket = game.get_owner(question=old_question.text)
         game.set_owner(question=new_question.text, websocket=question_owner_websocket)
+
+        new_question.set_sent_time()
         await send_json(
             ws=question_owner_websocket, event=QuestionEvent(value=new_question.text)
         )
